@@ -1,0 +1,69 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+df = pd.read_csv('city_temperature.csv')
+
+# Filtering: select data for the year 2019 and for Bucharest.
+df = df[(df['Year'] == 2019) & (df['City'].str.lower() == 'bucharest')]
+
+# Remove missing values (set as -99)
+df = df[df['AvgTemperature'] != -99]
+
+# Convert temperature from Fahrenheit to Celsius: C = (F - 32) * 5/9
+df['Temperature_C'] = (df['AvgTemperature'] - 32) * 5/9
+
+# Mapping months (assuming there is a numeric "Month" column)
+month_map = {1: "Ian", 2: "Feb", 3: "Mar", 4: "Apr", 5: "Mai", 6: "Iun",
+             7: "Iul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Noi", 12: "Dec"}
+df['Month_name'] = df['Month'].map(month_map)
+
+# To maintain the correct month order, define an ordered list:
+month_order = ["Ian", "Feb", "Mar", "Apr", "Mai", "Iun", "Iul", "Aug", "Sep", "Oct", "Noi", "Dec"]
+
+# ------------------ Box Plot Chart ------------------
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Month_name', y='Temperature_C', data=df, order=month_order)
+plt.xlabel("Luna")
+plt.ylabel("Temperatura (°C)")
+plt.title("Box Plot: Distributia temperaturii pe luni în 2019 - Bucuresti")
+plt.show()
+
+# ------------------ Violin Plot Chart ------------------
+plt.figure(figsize=(10, 6))
+sns.violinplot(x='Month_name', y='Temperature_C', data=df, order=month_order, inner="quartile")
+plt.xlabel("Luna")
+plt.ylabel("Temperatura (°C)")
+plt.title("Violin Plot: Distributia temperaturii pe luni în 2019 - Bucuresti")
+plt.show()
+
+# ------------------ Ridgeline Plot Chart ------------------
+# For each month, calculate the kernel density and display the distribution with a vertical offset.
+plt.figure(figsize=(10, 8))
+y_ticks = []
+y_ticklabels = []
+
+# Loop through the months in the specified order
+for i, month in enumerate(month_order):
+    subset = df[df['Month_name'] == month]['Temperature_C']
+    if len(subset) > 1:
+        # Calculate the kernel density
+        density = gaussian_kde(subset)
+        xs = np.linspace(subset.min()-2, subset.max()+2, 200)
+        ys = density(xs)
+        # Normalize the density to have a smaller height (scaling)
+        ys = ys / ys.max() * 0.8
+        # Plot the density area, shifted vertically
+        plt.fill_between(xs, i, ys + i, alpha=0.6)
+        plt.plot(xs, ys + i, color='black', linewidth=1)
+        y_ticks.append(i + 0.4)
+        y_ticklabels.append(month)
+
+plt.xlabel("Temperatura (°C)")
+plt.ylabel("Luna")
+plt.yticks(y_ticks, y_ticklabels)
+plt.title("Ridgeline Plot: Distributia temperaturii pe luni în 2019 - Bucuresti")
+plt.tight_layout()
+plt.show()
